@@ -35,7 +35,7 @@ type Monitor interface {
 // * Querying these batches by doing a map lookup;
 // * Aggregating and emitting metrics based on the received HTTP transactions;
 type EBPFMonitor struct {
-	handler func([]httpTX)
+	handler func(httpTX)
 
 	ebpfProgram            *ebpfProgram
 	batchManager           *batchManager
@@ -88,9 +88,9 @@ func NewEBPFMonitor(c *config.Config, offsets []manager.ConstantEditor, sockFD *
 	telemetry := newTelemetry()
 	statkeeper := newHTTPStatkeeper(c, telemetry)
 
-	handler := func(transactions []httpTX) {
+	handler := func(tx httpTX) {
 		if statkeeper != nil {
-			statkeeper.Process(transactions)
+			statkeeper.Process(tx)
 		}
 	}
 
@@ -189,10 +189,15 @@ func (m *EBPFMonitor) Stop() {
 }
 
 func (m *EBPFMonitor) process(transactions []httpTX, err error) {
-	m.telemetry.aggregate(transactions, err)
+	for _, tx := range httpTX {
+		m.telemetry.aggregate(tx, err)
 
-	if m.handler != nil && len(transactions) > 0 {
-		m.handler(transactions)
+		if m.handler != nil {
+		m.handler(tx)
+	}
+
+	if err != nil {
+		m.telemetry.aggregateErr(err)
 	}
 }
 

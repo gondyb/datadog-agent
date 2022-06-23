@@ -86,17 +86,16 @@ func (m *DriverMonitor) Start() {
 }
 
 func (m *DriverMonitor) process(transactionBatch []driver.HttpTransactionType) {
-	transactions := make([]httpTX, len(transactionBatch))
-	for i := range transactionBatch {
-		transactions[i] = httpTX(transactionBatch[i])
-	}
-
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
-	m.telemetry.aggregate(transactions, nil)
+	for _, transactionDrv := range transactionBatch {
+		tx := &driverHttpTX{HttpTransactionType: &transactionDrv}
 
-	m.statkeeper.Process(transactions)
+		m.telemetry.aggregate(tx)
+
+		m.statkeeper.Process(tx)
+	}
 }
 
 // GetHTTPStats returns a map of HTTP stats stored in the following format:

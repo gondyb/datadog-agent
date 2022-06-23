@@ -44,13 +44,10 @@ func newHTTPStatkeeper(c *config.Config, telemetry *telemetry) *httpStatKeeper {
 	}
 }
 
-func (h *httpStatKeeper) Process(transactions []httpTX) {
-	for _, tx := range transactions {
-		if tx.Incomplete() {
-			h.incomplete.Add(tx)
-			continue
-		}
-
+func (h *httpStatKeeper) Process(tx httpTX) {
+	if tx.Incomplete() {
+		h.incomplete.Add(tx)
+	} else {
 		h.add(tx)
 	}
 }
@@ -81,7 +78,7 @@ func (h *httpStatKeeper) add(tx httpTX) {
 		return
 	}
 
-	stats.AddRequest(tx.StatusClass(), tx.RequestLatency(), tx.Tags())
+	stats.AddRequest(tx.StatusClass(), tx.RequestLatency(), tx.StaticTags(), tx.DynamicTags())
 	h.stats[key] = stats
 }
 

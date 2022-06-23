@@ -196,7 +196,14 @@ func newHttpMonitor(c *config.Config) http.Monitor {
 	}
 	log.Infof("http monitoring has been enabled")
 
-	monitor, err := http.NewDriverMonitor(c)
+	var monitor http.Monitor
+	var err error
+
+	if c.EnableHTTPHTTPSMonitoringViaETW {
+		monitor, err = http.NewEtwMonitor(c)
+	} else {
+		monitor, err = http.NewDriverMonitor(c)
+	}
 	if err != nil {
 		log.Errorf("could not instantiate http monitor: %s", err)
 		return http.NewNoOpMonitor()

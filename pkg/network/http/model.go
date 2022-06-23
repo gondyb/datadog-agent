@@ -100,8 +100,12 @@ func (tx *httpTX) StatusCode() uint16 {
 
 // Tags returns an uint64 representing the tags bitfields
 // Tags are defined here : pkg/network/ebpf/kprobe_types.go
-func (tx *httpTX) Tags() uint64 {
+func (tx *httpTX) StaticTags() uint64 {
 	return uint64(tx.tags)
+}
+
+func (tx *httpTX) DynamicTags() []string {
+	return nil
 }
 
 // IsDirty detects whether the batch page we're supposed to read from is still

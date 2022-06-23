@@ -109,7 +109,10 @@ type RequestStats [NumStatusClasses]struct {
 	FirstLatencySample float64
 
 	// Tags bitfields from tags-types.h
-	Tags uint64
+	StaticTags uint64
+
+	// Dynamic tags (if attached)
+	DynamicTags []string
 }
 
 // CombineWith merges the data in 2 RequestStats objects
@@ -118,7 +121,10 @@ func (r *RequestStats) CombineWith(newStats RequestStats) {
 	for i := 0; i < len(r); i++ {
 		statusClass := 100 * (i + 1)
 
-		r[i].Tags |= newStats[i].Tags
+		r[i].StaticTags |= newStats[i].StaticTags
+		if len(newStats[i].DynamicTags) != 0 {
+			r[i].DynamicTags = append(r[i].DynamicTags, newStats[i].DynamicTags...)
+		}
 
 		if newStats[i].Count == 0 {
 			// Nothing to do in this case
@@ -127,7 +133,7 @@ func (r *RequestStats) CombineWith(newStats RequestStats) {
 
 		if newStats[i].Count == 1 {
 			// The other bucket has a single latency sample, so we "manually" add it
-			r.AddRequest(statusClass, newStats[i].FirstLatencySample, newStats[i].Tags)
+			r.AddRequest(statusClass, newStats[i].FirstLatencySample, newStats[i].StaticTags, newStats[i].DynamicTags)
 			continue
 		}
 
@@ -158,13 +164,16 @@ func (r *RequestStats) CombineWith(newStats RequestStats) {
 }
 
 // AddRequest takes information about a HTTP transaction and adds it to the request stats
-func (r *RequestStats) AddRequest(statusClass int, latency float64, tags uint64) {
+func (r *RequestStats) AddRequest(statusClass int, latency float64, staticTags uint64, dynamicTags []string) {
 	i := statusClass/100 - 1
 	if i < 0 || i >= len(r) {
 		return
 	}
 
-	r[i].Tags |= tags
+	r[i].StaticTags |= staticTags
+	if len(dynamicTags) != 0 {
+		r[i].DynamicTags = append(r[i].DynamicTags, dynamicTags...)
+	}
 
 	r[i].Count++
 	if r[i].Count == 1 {

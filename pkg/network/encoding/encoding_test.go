@@ -431,10 +431,10 @@ func TestSerialization(t *testing.T) {
 
 func TestFormatHTTPStatsByPath(t *testing.T) {
 	var httpReqStats http.RequestStats
-	httpReqStats.AddRequest(100, 12.5, 0)
-	httpReqStats.AddRequest(100, 12.5, tagGnuTLS)
-	httpReqStats.AddRequest(405, 3.5, tagOpenSSL)
-	httpReqStats.AddRequest(405, 3.5, 0)
+	httpReqStats.AddRequest(100, 12.5, 0, nil)
+	httpReqStats.AddRequest(100, 12.5, tagGnuTLS, nil)
+	httpReqStats.AddRequest(405, 3.5, tagOpenSSL, nil)
+	httpReqStats.AddRequest(405, 3.5, 0, nil)
 
 	// Verify the latency data is correct prior to serialization
 	latencies := httpReqStats[model.HTTPResponseStatus_Info].Latencies

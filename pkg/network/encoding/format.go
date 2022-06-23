@@ -49,6 +49,7 @@ func FormatConnection(
 	httpStats *model.HTTPAggregations,
 	dnsFormatter *dnsFormatter,
 	ipc ipCache,
+	connDynamicTags map[string]struct{},
 	tagsSet *network.TagsSet,
 ) *model.Connection {
 	c := connPool.Get().(*model.Connection)
@@ -76,7 +77,7 @@ func FormatConnection(
 
 	c.RouteIdx = formatRouteIdx(conn.Via, routes)
 	dnsFormatter.FormatConnectionDNS(conn, c)
-	c.Tags = formatTags(tagsSet, conn)
+	c.Tags = formatTags(tagsSet, conn, connDynamicTags)
 
 	if httpStats != nil {
 		c.HttpAggregations, _ = proto.Marshal(httpStats)
@@ -125,11 +126,16 @@ func FormatCompilationTelemetry(telByAsset map[string]network.RuntimeCompilation
 }
 
 // FormatHTTPStats converts the HTTP map into a suitable format for serialization
-func FormatHTTPStats(httpData map[http.Key]http.RequestStats) (map[http.Key]*model.HTTPAggregations, map[http.Key]uint64) {
-	var (
-		aggregationsByKey = make(map[http.Key]*model.HTTPAggregations, len(httpData))
-		tagsByKey         = make(map[http.Key]uint64, len(httpData))
+func FormatHTTPStats(httpData map[http.Key]http.RequestStats) (
+	aggregationsByKey map[http.Key]*model.HTTPAggregations,
+	staticTagsSet map[http.Key]uint64,
+	dynamicTagsSet map[http.Key]map[string]struct{}) {
 
+	aggregationsByKey = make(map[http.Key]*model.HTTPAggregations, len(httpData))
+	staticTagsSet = make(map[http.Key]uint64, len(httpData))
+	dynamicTagsSet = make(map[http.Key]map[string]struct{}, len(httpData))
+
+	var (
 		// Pre-allocate some of the objects
 		dataPool = make([]model.HTTPStats_Data, len(httpData)*http.NumStatusClasses)
 		ptrPool  = make([]*model.HTTPStats_Data, len(httpData)*http.NumStatusClasses)
@@ -157,7 +163,8 @@ func FormatHTTPStats(httpData map[http.Key]http.RequestStats) (map[http.Key]*mod
 			StatsByResponseStatus: ptrPool[poolIdx : poolIdx+http.NumStatusClasses],
 		}
 
-		var tags uint64
+		var staticTags uint64
+		var dynamicTags map[string]struct{}
 		for i := 0; i < len(stats); i++ {
 			data := &dataPool[poolIdx+i]
 			ms.StatsByResponseStatus[i] = data
@@ -169,15 +176,27 @@ func FormatHTTPStats(httpData map[http.Key]http.RequestStats) (map[http.Key]*mod
 			} else {
 				data.FirstLatencySample = stats[i].FirstLatencySample
 			}
-			tags |= stats[i].Tags
+			staticTags |= stats[i].StaticTags
+
+			// It is a map to aggregate the same tag
+			if len(stats[i].DynamicTags) > 0 {
+				if dynamicTags == nil {
+					dynamicTags = make(map[string]struct{})
+				}
+
+				for _, dynamicTag := range stats[i].DynamicTags {
+					dynamicTags[dynamicTag] = struct{}{}
+				}
+			}
 		}
-		tagsByKey[key] |= tags
+		staticTagsSet[key] |= staticTags
+		dynamicTagsSet[key] = dynamicTags
 
 		poolIdx += http.NumStatusClasses
 		httpAggregations.EndpointAggregations = append(httpAggregations.EndpointAggregations, ms)
 	}
 
-	return aggregationsByKey, tagsByKey
+	return aggregationsByKey, staticTagsSet, dynamicTagsSet
 }
 
 // Build possible keys for the http map
@@ -309,9 +328,16 @@ func routeKey(v *network.Via) string {
 	return v.Subnet.Alias
 }
 
-func formatTags(tagsSet *network.TagsSet, c network.ConnectionStats) (tagsIdx []uint32) {
+func formatTags(tagsSet *network.TagsSet, c network.ConnectionStats, connDynamicTags map[string]struct{}) (tagsIdx []uint32) {
+	// Static tags
 	for _, tag := range network.GetStaticTags(c.Tags) {
 		tagsIdx = append(tagsIdx, tagsSet.Add(tag))
 	}
+
+	// Dynamic tags
+	for tag, _ := range connDynamicTags {
+		tagsIdx = append(tagsIdx, tagsSet.Add(tag))
+	}
+
 	return tagsIdx
 }

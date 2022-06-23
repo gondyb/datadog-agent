@@ -32,13 +32,13 @@ func newTelemetry() *telemetry {
 	}
 }
 
-func (t *telemetry) aggregate(txs []httpTX, err error) {
-	for _, tx := range txs {
-		if i := tx.StatusClass()/100 - 1; i >= 0 && i < len(t.hits) {
-			atomic.AddInt64(&t.hits[i], 1)
-		}
+func (t *telemetry) aggregate(tx httpTX) {
+	if i := tx.StatusClass()/100 - 1; i >= 0 && i < len(t.hits) {
+		atomic.AddInt64(&t.hits[i], 1)
 	}
+}
 
+func (t *telemetry) aggregateErr(err error) {
 	if err == errLostBatch {
 		atomic.AddInt64(&t.misses, int64(HTTPBatchSize))
 	}

@@ -68,7 +68,7 @@ func modelConnections(conns *network.Connections) *model.Connections {
 
 	agentConns := make([]*model.Connection, len(conns.Conns))
 	routeIndex := make(map[string]RouteIdx)
-	httpIndex, tagsIndex := FormatHTTPStats(conns.HTTP)
+	httpIndex, staticTagsSet, dynamicTagsSet := FormatHTTPStats(conns.HTTP)
 	httpMatches := make(map[http.Key]struct{}, len(httpIndex))
 	ipc := make(ipCache, len(conns.Conns)/2)
 	dnsFormatter := newDNSFormatter(conns, ipc)
@@ -77,17 +77,21 @@ func modelConnections(conns *network.Connections) *model.Connections {
 	for i, conn := range conns.Conns {
 		var httpAggregations *model.HTTPAggregations
 
+		var connDynamicTags map[string]struct{} = nil
 		httpKeys := httpKeysFromConn(conn)
 		for _, httpKey := range httpKeys {
 			httpAggregations = httpIndex[httpKey]
 			if httpAggregations != nil {
 				httpMatches[httpKey] = struct{}{}
-				conn.Tags |= tagsIndex[httpKey]
+				conn.Tags |= staticTagsSet[httpKey]
+				connDynamicTags = dynamicTagsSet[httpKey]
 				break
 			}
 		}
 
-		agentConns[i] = FormatConnection(conn, routeIndex, httpAggregations, dnsFormatter, ipc, tagsSet)
+		// We could add connDynamicTags as conn field but perforamce implications for conn storage are not clear
+		// therefore passing connDynamicTags which are part of conn explicitly to FormatConnection
+		agentConns[i] = FormatConnection(conn, routeIndex, httpAggregations, dnsFormatter, ipc, connDynamicTags, tagsSet)
 	}
 
 	if orphans := len(httpIndex) - len(httpMatches); orphans > 0 {
