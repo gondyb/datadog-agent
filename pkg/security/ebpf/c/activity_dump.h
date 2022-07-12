@@ -218,7 +218,7 @@ __attribute__((always_inline)) void fill_activity_dump_discarder_state(void *ctx
         if (!buffer) {
             return;
         }
-        __builtin_memset(buffer, 0, sizeof(struct ad_container_id_comm));
+        // __builtin_memset(buffer, 0, sizeof(struct ad_container_id_comm));
 
         bpf_probe_read(&buffer->container_id, sizeof(buffer->container_id), proc_entry->container.container_id);
         bpf_probe_read(&buffer->comm, sizeof(buffer->comm), proc_entry->comm);
