@@ -106,8 +106,8 @@ var execProbes = []*manager.Probe{
 	{
 		ProbeIdentificationPair: manager.ProbeIdentificationPair{
 			UID:          SecurityAgentUID,
-			EBPFSection:  "kprobe/security_bprm_committed_creds",
-			EBPFFuncName: "kprobe_security_bprm_committed_creds",
+			EBPFSection:  "kretprobe/setup_arg_pages",
+			EBPFFuncName: "kretprobe_setup_arg_pages",
 		},
 	},
 	{
@@ -136,6 +136,13 @@ var execProbes = []*manager.Probe{
 			UID:          SecurityAgentUID,
 			EBPFSection:  "kprobe/switch_task_namespaces",
 			EBPFFuncName: "kprobe_switch_task_namespaces",
+		},
+	},
+	{
+		ProbeIdentificationPair: manager.ProbeIdentificationPair{
+			UID:          SecurityAgentUID,
+			EBPFSection:  "kprobe/setup_arg_pages",
+			EBPFFuncName: "kprobe_setup_arg_pages",
 		},
 	},
 }
@@ -222,6 +229,18 @@ func getExecTailCallRoutes() []manager.TailCallRoute {
 			ProbeIdentificationPair: manager.ProbeIdentificationPair{
 				EBPFSection:  "kprobe/parse_args_envs",
 				EBPFFuncName: "kprobe_parse_args_envs",
+			},
+		}
+		routes = append(routes, route)
+	}
+
+	for i := uint32(0); i != 10; i++ {
+		route := manager.TailCallRoute{
+			ProgArrayName: "args_envs_seq_progs",
+			Key:           i,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFSection:  "kprobe/parse_args_envs_seq",
+				EBPFFuncName: "kprobe_parse_args_envs_seq",
 			},
 		}
 		routes = append(routes, route)
