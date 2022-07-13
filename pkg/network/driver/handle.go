@@ -57,9 +57,6 @@ var handleTypeToPathName = map[HandleType]string{
 	StatsHandle: "driverstatshandle", // for now just use that; any path will do
 }
 
-// RL: a "Handle" is anything that can readFile or DeviceIoControl?
-// RL: go-ism - define in terms of what actions our types can execute
-// RL: any type that defines the readFile and DeviceIoControl method "satifies" the Handle interface
 type Handle interface {
 	ReadFile(p []byte, bytesRead *uint32, ol *windows.Overlapped) error
 	DeviceIoControl(ioControlCode uint32, inBuffer *byte, inBufferSize uint32, outBuffer *byte, outBufferSize uint32, bytesReturned *uint32, overlapped *windows.Overlapped) (err error)
@@ -117,7 +114,6 @@ func (tdh *TestDriverHandle) readFile(p []byte, bytesRead *uint32, ol *windows.O
 }
 */
 // NewHandle creates a new windows handle attached to the driver
-// RL: How do we tell this to return a "TestDriverHandle"? or do we need to define a seperate one i.e. NewTestDriverHandle?
 func NewHandle(flags uint32, handleType HandleType) (Handle, error) {
 	pathext, ok := handleTypeToPathName[handleType]
 	if !ok {
@@ -143,7 +139,6 @@ func NewHandle(flags uint32, handleType HandleType) (Handle, error) {
 }
 
 // Close closes the underlying windows handle
-// RL: Does this need an implementation for TestDriverHandle?
 func (dh *RealDriverHandle) Close() error {
 	return windows.CloseHandle(dh.Handle)
 }
