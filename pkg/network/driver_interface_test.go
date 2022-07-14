@@ -10,117 +10,84 @@ package network
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/DataDog/datadog-agent/pkg/network/config"
 	"github.com/DataDog/datadog-agent/pkg/network/driver"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows"
-	"testing"
 )
 
-/// for the test code
-type TestDriverHandleFail struct {
-	// store some state variables
-	hasCalled       bool
+type TestDriverHandleInfiniteLoop struct {
+	t *testing.T
+	// state variables
+	hasBeenCalled   bool
 	lastReturnBytes uint32
 	lastBufferSize  int
 	lastError       error
 }
 
-func (tdh *TestDriverHandleFail) ReadFile(p []byte, bytesRead *uint32, ol *windows.Overlapped) error {
+func (tdh *TestDriverHandleInfiniteLoop) ReadFile(p []byte, bytesRead *uint32, ol *windows.Overlapped) error {
+	fmt.Print("TEST READFILE CALLED")
 	// check state in struct to see if we've been called before
-	if tdh.hasCalled {
-		if tdh.lastReturnBytes == 0 && tdh.lastError == windows.ERROR_MORE_DATA {
-			// last time we returned empty but more...if caller does that twice in a row it's bad
-			if len(p) <= tdh.lastBufferSize {
-				panic(fmt.Errorf("Consecutive calls"))
-			}
+	if tdh.hasBeenCalled {
+		//if tdh.lastReturnBytes == 0 && tdh.lastError == windows.ERROR_MORE_DATA {
+		// last time we returned empty but more...if caller does that twice in a row it's bad
+		if len(p) <= tdh.lastBufferSize {
+			tdh.t.Fatal("Consecutive calls without a larger buffer")
 		}
+		return nil
 	}
-	return nil
+	tdh.hasBeenCalled = true
+	*bytesRead = 0
+	tdh.lastBufferSize = len(p)
+	return windows.ERROR_MORE_DATA
 }
 
-func (tdh *TestDriverHandleFail) GetWindowsHandle() windows.Handle {
+func (tdh *TestDriverHandleInfiniteLoop) GetWindowsHandle() windows.Handle {
 	return windows.Handle(0)
 }
 
-func (tdh *TestDriverHandleFail) DeviceIoControl(ioControlCode uint32, inBuffer *byte, inBufferSize uint32, outBuffer *byte, outBufferSize uint32, bytesReturned *uint32, overlapped *windows.Overlapped) (err error) {
-	fmt.Printf("Got test ioctl call")
-	if ioControlCode != 0 {
-		return fmt.Errorf("wrong ioctl code")
-	}
+func (tdh *TestDriverHandleInfiniteLoop) DeviceIoControl(ioControlCode uint32, inBuffer *byte, inBufferSize uint32, outBuffer *byte, outBufferSize uint32, bytesReturned *uint32, overlapped *windows.Overlapped) (err error) {
 	return nil
 }
 
-func (tdh *TestDriverHandleFail) CancelIoEx(ol *windows.Overlapped) error {
+func (tdh *TestDriverHandleInfiniteLoop) CancelIoEx(ol *windows.Overlapped) error {
 	return nil
 }
 
-func (tdh *TestDriverHandleFail) GetStatsForHandle() (map[string]map[string]int64, error) {
+func (tdh *TestDriverHandleInfiniteLoop) GetStatsForHandle() (map[string]map[string]int64, error) {
 	return nil, nil
 }
-func (tdh *TestDriverHandleFail) Close() error {
+func (tdh *TestDriverHandleInfiniteLoop) Close() error {
 	return nil
 }
 
-func NewFailHandle(flags uint32, handleType driver.HandleType) (driver.Handle, error) {
-	return &TestDriverHandleFail{}, nil
+func TestReadFileInfiniteLoop(t *testing.T) {
+
+	activeBuf := NewConnectionBuffer(10, 10)
+	closedBuf := NewConnectionBuffer(10, 10)
+
+	di, err := NewDriverInterface(config.New(), func(flags uint32, handleType driver.HandleType) (driver.Handle, error) {
+		return &TestDriverHandleInfiniteLoop{t: t}, nil
+	})
+	require.NoError(t, err, "Failed to create new driver interface")
+
+	di.GetConnectionStats(activeBuf, closedBuf, func(c *ConnectionStats) bool {
+		return true
+	})
+
 }
 
-func TestSetFlowFiltersFail(t *testing.T) {
-	CreateDriverHandle = NewFailHandle
-
-	_, err := NewDriverInterface(config.New())
-	assert.Error(t, err, "Failed to create new driver interface")
-}
-
-/// for the test code
-type TestDriverHandleSuccess struct {
-	// store some state variables
-	hasCalled       bool
+type TestDriverHandleFiltersSuccess struct {
+	t *testing.T
+	// state variables
+	hasBeenCalled   bool
 	lastReturnBytes uint32
 	lastBufferSize  int
 	lastError       error
 }
 
-func (tdh *TestDriverHandleSuccess) ReadFile(p []byte, bytesRead *uint32, ol *windows.Overlapped) error {
-	// check state in struct to see if we've been called before
-	if tdh.hasCalled {
-		if tdh.lastReturnBytes == 0 && tdh.lastError == windows.ERROR_MORE_DATA {
-			// last time we returned empty but more...if caller does that twice in a row it's bad
-			if len(p) <= tdh.lastBufferSize {
-				panic(fmt.Errorf("Consecutive calls"))
-			}
-		}
-	}
+func (tdh *TestDriverHandleFiltersSuccess) ReadFile(p []byte, bytesRead *uint32, ol *windows.Overlapped) error {
 	return nil
-}
-
-func (tdh *TestDriverHandleSuccess) GetWindowsHandle() windows.Handle {
-	return windows.Handle(0)
-}
-
-func (tdh *TestDriverHandleSuccess) DeviceIoControl(ioControlCode uint32, inBuffer *byte, inBufferSize uint32, outBuffer *byte, outBufferSize uint32, bytesReturned *uint32, overlapped *windows.Overlapped) (err error) {
-	return nil
-}
-
-func (tdh *TestDriverHandleSuccess) CancelIoEx(ol *windows.Overlapped) error {
-	return nil
-}
-
-func (tdh *TestDriverHandleSuccess) GetStatsForHandle() (map[string]map[string]int64, error) {
-	return nil, nil
-}
-func (tdh *TestDriverHandleSuccess) Close() error {
-	return nil
-}
-
-func NewSuccessHandle(flags uint32, handleType driver.HandleType) (driver.Handle, error) {
-	return &TestDriverHandleSuccess{}, nil
-}
-
-func TestSetFlowFiltersSuccess(t *testing.T) {
-	CreateDriverHandle = NewSuccessHandle
-
-	_, err := NewDriverInterface(config.New())
-	assert.NoError(t, err, "Failed to create new driver interface")
 }

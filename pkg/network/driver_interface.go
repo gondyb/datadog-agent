@@ -42,10 +42,6 @@ const (
 	defaultDriverBufferSize = defaultFlowEntries * driver.PerFlowDataSize
 )
 
-//
-
-var CreateDriverHandle = driver.NewHandle
-
 // DriverExpvarNames is a list of all the DriverExpvar names returned from GetStats
 var DriverExpvarNames = []DriverExpvar{totalFlowStats, flowHandleStats, flowStats, driverStats}
 
@@ -72,8 +68,13 @@ type DriverInterface struct {
 	cfg *config.Config
 }
 
+// Function pointer definition passed to NewDriverInterface that enables
+// creating DriverInterfaces with varying handle types like ReadDriverHandle or
+// TestDriverHandle*
+type HandleCreateFn func(flags uint32, handleType driver.HandleType) (driver.Handle, error)
+
 // NewDriverInterface returns a DriverInterface struct for interacting with the driver
-func NewDriverInterface(cfg *config.Config) (*DriverInterface, error) {
+func NewDriverInterface(cfg *config.Config, handleFunc HandleCreateFn) (*DriverInterface, error) {
 	dc := &DriverInterface{
 		totalFlows:       atomic.NewInt64(0),
 		closedFlows:      atomic.NewInt64(0),
@@ -90,7 +91,13 @@ func NewDriverInterface(cfg *config.Config) (*DriverInterface, error) {
 		maxClosedFlows:        uint64(cfg.MaxClosedConnectionsBuffered),
 	}
 
-	err := dc.setupFlowHandle()
+	h, err := handleFunc(0, driver.FlowHandle)
+	if err != nil {
+		return nil, err
+	}
+	dc.driverFlowHandle = h
+
+	err = dc.setupFlowHandle()
 	if err != nil {
 		return nil, fmt.Errorf("error creating driver flow handle: %w", err)
 	}
@@ -109,11 +116,6 @@ func (di *DriverInterface) Close() error {
 // setupFlowHandle generates a windows Driver Handle, and creates a DriverHandle struct to pull flows from the driver
 // by setting the necessary filters
 func (di *DriverInterface) setupFlowHandle() error {
-	dh, err := CreateDriverHandle(0, driver.FlowHandle)
-	if err != nil {
-		return err
-	}
-	di.driverFlowHandle = dh
 
 	filters, err := di.createFlowHandleFilters()
 	if err != nil {
