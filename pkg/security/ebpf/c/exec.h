@@ -617,15 +617,15 @@ int kprobe_exit_itimers(struct pt_regs *ctx) {
 #define DEBUG 1
 #endif
 
-void __attribute__((always_inline)) parse_args_envs_seq(struct pt_regs *ctx, struct str_seq_t *str_seq, u64 event_type) {
-    const char *args_envs = str_seq->seq;
-    int offset = str_seq->offset;
-    int str_count = str_seq->str_count;
+void __attribute__((always_inline)) parse_args_envs_seq(struct pt_regs *ctx, struct args_envs_seq_t *args_envs, int envs_id, u64 event_type) {
+    const char *args_start = args_envs->args_start;
+    int offset = args_envs->offset;
+    int str_count = args_envs->str_count;
     if (str_count == 255) {
         return;
     }
 
-    str_seq->truncated = 0;
+    args_envs->truncated = 0;
 
     u32 key = 0;
     struct str_array_buffer_t *buff = bpf_map_lookup_elem(&str_array_buffers, &key);
@@ -634,7 +634,8 @@ void __attribute__((always_inline)) parse_args_envs_seq(struct pt_regs *ctx, str
     }
 
     struct args_envs_event_t event = {
-        .id = str_seq->id,
+        .id = args_envs->id,
+        .size = 0,
     };
 
     int i = 0;
@@ -647,7 +648,7 @@ void __attribute__((always_inline)) parse_args_envs_seq(struct pt_regs *ctx, str
         // we get a pointer in the buffer, to the next position we can write a string to
         void *ptr = &(buff->value[(event.size + sizeof(n)) & (MAX_STR_BUFF_LEN - MAX_ARRAY_ELEMENT_SIZE - 1)]);
         // we copy a string to the buffer
-        n = bpf_probe_read_str(ptr, MAX_ARRAY_ELEMENT_SIZE, (void *)(args_envs + offset));
+        n = bpf_probe_read_str(ptr, MAX_ARRAY_ELEMENT_SIZE, (void *)(args_start + offset));
 #ifdef DEBUG
         if (n > 0) {
             bpf_printk("read arg[%d]: %s\n", str_count, (char *)ptr);
@@ -677,23 +678,34 @@ void __attribute__((always_inline)) parse_args_envs_seq(struct pt_regs *ctx, str
 
                 send_event(ctx, event_type, event);
                 event.size = 0;
+                if (str_count >= args_envs->argc) {
+#ifdef DEBUG
+                    bpf_printk("hit args/envs limit: changed event id\n");
+#endif
+                    event.id = envs_id;
+                }
+
             } else {
                 // in case the value fits in the remaining event space, we move on to the next string
                 event.size += len;
                 //index++;
                 str_count++;
                 offset += n + 1;
+                if (str_count == args_envs->argc || str_count == args_envs->argc + args_envs->envc) {
+#ifdef DEBUG
+                    bpf_printk("hit args/envs limit: break\n");
+#endif
+                    break;
+                }
             }
-
-            //bpf_probe_read(&str, sizeof(str), (void *)&array[index]);
         } else {
             str_count = 255; // stop here
             break;
         }
     }
-    str_seq->offset = offset;
-    str_seq->str_count = str_count;
-    str_seq->truncated = i == MAX_ARRAY_ELEMENT_PER_TAIL;
+    args_envs->offset = offset;
+    args_envs->str_count = str_count;
+    args_envs->truncated = i == MAX_ARRAY_ELEMENT_PER_TAIL;
 
     // flush remaining values
     if (event.size > 0) {
@@ -715,7 +727,15 @@ int kprobe_parse_args_envs_seq(struct pt_regs *ctx) {
     bpf_printk("in kprobe_parse_args_envs_seq\n");
 #endif
 
-    parse_args_envs_seq(ctx, &syscall->exec.args_envs_seq, EVENT_ARGS_ENVS);
+    if (syscall->exec.args_envs.str_count < syscall->exec.args_envs.argc) {
+        syscall->exec.args_envs.id = syscall->exec.args.id;
+    } else if (syscall->exec.args_envs.str_count < syscall->exec.args_envs.argc + syscall->exec.args_envs.envc) {
+        syscall->exec.args_envs.id = syscall->exec.envs.id;
+    } else {
+        return 0;
+    }
+
+    parse_args_envs_seq(ctx, &syscall->exec.args_envs, syscall->exec.envs.id, EVENT_ARGS_ENVS);
 
     syscall->exec.next_tail++;
 
@@ -786,10 +806,12 @@ int __attribute__((always_inline)) setupargpages(struct pt_regs *ctx) {
     }
 #endif
 
-    syscall->exec.args_envs_seq.seq = (char *)p;
-    syscall->exec.args_envs_seq.id = syscall->exec.args.id;
-    syscall->exec.args_envs_seq.offset = 0;
-    syscall->exec.args_envs_seq.str_count = 0;
+    syscall->exec.args_envs.args_start = (char *)p;
+    //syscall->exec.args_envs.id = syscall->exec.args.id;
+    syscall->exec.args_envs.argc = argc;
+    syscall->exec.args_envs.envc = envc;
+    syscall->exec.args_envs.offset = 0;
+    syscall->exec.args_envs.str_count = 0;
     syscall->exec.args_parsed = ARGS_PARSED_FROM_STACK_COPY;
     syscall->exec.next_tail = 0;
 
@@ -838,10 +860,10 @@ int kprobe_security_bprm_check(struct pt_regs *ctx) {
 
 void __attribute__((always_inline)) fill_args_envs(struct exec_event_t *event, struct syscall_cache_t *syscall) {
     if (syscall->exec.args_parsed == ARGS_PARSED_FROM_STACK_COPY) {
-        event->args_id = syscall->exec.args_envs_seq.id;
-        event->args_truncated = syscall->exec.args_envs_seq.truncated;
-        event->envs_id = syscall->exec.args_envs_seq.id;
-        event->envs_truncated = syscall->exec.args_envs_seq.truncated;
+        event->args_id = syscall->exec.args.id;
+        event->args_truncated = syscall->exec.args_envs.truncated;
+        event->envs_id = syscall->exec.envs.id;
+        event->envs_truncated = syscall->exec.args_envs.truncated;
     } else {
         event->args_id = syscall->exec.args.id;
         event->args_truncated = syscall->exec.args.truncated;
