@@ -67,6 +67,7 @@ linters:
     - staticcheck # staticcheck is a go vet on steroids, applying a ton of static analysis checks
     - govet       # Vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
     - depguard    # Depguard is useful for preventing specific packages from being used
+    - goimports   # Order imports correctly, with datadog-agent packages in a third section
 
 linters-settings:
   depguard:
@@ -96,3 +97,5 @@ linters-settings:
           - github.com/DataDog/datadog-agent/pkg/util/log.Printf
           - github.com/DataDog/datadog-agent/pkg/util/log.Warnf
           - github.com/DataDog/datadog-agent/pkg/util/log.Errorf
+  goimports:
+    local-prefixes: github.com/DataDog/datadog-agent

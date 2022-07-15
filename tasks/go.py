@@ -19,9 +19,11 @@ from .utils import get_build_flags
 
 
 @task
-def golangci_lint(ctx, targets, rtloader_root=None, build_tags=None, arch="x64"):
+def golangci_lint(ctx, targets, rtloader_root=None, build_tags=None, arch="x64", fix=False):
     """
     Run golangci-lint on targets using .golangci.yml configuration.
+
+    Some linters support fixing; to apply, use --fix.
 
     Example invocation:
         inv golangci-lint --targets=./pkg/collector/check,./pkg/aggregator
@@ -31,13 +33,14 @@ def golangci_lint(ctx, targets, rtloader_root=None, build_tags=None, arch="x64")
         # as comma separated tokens in a string
         targets = targets.split(',')
 
+    fix = '--fix' if fix else ''
     tags = build_tags or get_default_build_tags(build="test", arch=arch)
     _, _, env = get_build_flags(ctx, rtloader_root=rtloader_root)
     # we split targets to avoid going over the memory limit from circleCI
     for target in targets:
         print(f"running golangci on {target}")
         ctx.run(
-            f"golangci-lint run --timeout 10m0s --build-tags '{' '.join(tags)}' {target}/...",
+            f"golangci-lint run {fix} --timeout 10m0s --build-tags '{' '.join(tags)}' {target}/...",
             env=env,
         )
 
