@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/DataDog/datadog-agent/pkg/version"
 	"github.com/DataDog/gohai/cpu"
 	"github.com/DataDog/gohai/memory"
 	"github.com/DataDog/gohai/network"
 	"github.com/DataDog/gohai/platform"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/DataDog/datadog-agent/pkg/version"
 )
 
 var (

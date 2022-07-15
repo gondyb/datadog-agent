@@ -12,10 +12,11 @@ import (
 	"math"
 	"os"
 
-	"github.com/DataDog/datadog-agent/pkg/security/utils"
 	manager "github.com/DataDog/ebpf-manager"
 	"github.com/cilium/ebpf"
 	"golang.org/x/sys/unix"
+
+	"github.com/DataDog/datadog-agent/pkg/security/utils"
 )
 
 const (

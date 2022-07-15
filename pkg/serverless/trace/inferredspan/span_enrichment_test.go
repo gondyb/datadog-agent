@@ -10,9 +10,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/DataDog/datadog-agent/pkg/trace/pb"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/DataDog/datadog-agent/pkg/trace/pb"
 )
 
 const (

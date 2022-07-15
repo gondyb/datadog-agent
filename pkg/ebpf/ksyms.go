@@ -10,8 +10,9 @@ import (
 	"os"
 	"sort"
 
-	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/pkg/errors"
+
+	"github.com/DataDog/datadog-agent/pkg/process/util"
 )
 
 // VerifyKernelFuncs ensures all kernel functions exist in ksyms located at provided path.

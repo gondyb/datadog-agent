@@ -10,11 +10,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/aws/aws-sdk-go/service/kms/kmsiface"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 // encryptionContextKey is the key added to the encryption context by the Lambda console UI

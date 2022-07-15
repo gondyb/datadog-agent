@@ -3,8 +3,9 @@ package service
 import (
 	"testing"
 
-	"github.com/DataDog/datadog-agent/pkg/proto/pbgo"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/DataDog/datadog-agent/pkg/proto/pbgo"
 )
 
 func TestClientPredicateBadTracerVersion(t *testing.T) {

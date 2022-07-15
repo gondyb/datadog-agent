@@ -15,13 +15,14 @@ import (
 	"syscall"
 	"time"
 
-	netstats "github.com/DataDog/datadog-agent/pkg/network/stats"
-	"github.com/DataDog/datadog-agent/pkg/process/util"
-	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"github.com/golang/groupcache/lru"
 	"github.com/vishvananda/netlink"
 	"go.uber.org/atomic"
 	"golang.org/x/sys/unix"
+
+	netstats "github.com/DataDog/datadog-agent/pkg/network/stats"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 type routeKey struct {
