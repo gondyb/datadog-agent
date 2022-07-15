@@ -9,7 +9,6 @@
 package network
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/DataDog/datadog-agent/pkg/network/config"
@@ -28,11 +27,9 @@ type TestDriverHandleInfiniteLoop struct {
 }
 
 func (tdh *TestDriverHandleInfiniteLoop) ReadFile(p []byte, bytesRead *uint32, ol *windows.Overlapped) error {
-	fmt.Print("TEST READFILE CALLED")
 	// check state in struct to see if we've been called before
 	if tdh.hasBeenCalled {
-		//if tdh.lastReturnBytes == 0 && tdh.lastError == windows.ERROR_MORE_DATA {
-		// last time we returned empty but more...if caller does that twice in a row it's bad
+		// TODO: verify <= is correct as opposed to ==
 		if len(p) <= tdh.lastBufferSize {
 			tdh.t.Fatal("Consecutive calls without a larger buffer")
 		}
@@ -59,24 +56,28 @@ func (tdh *TestDriverHandleInfiniteLoop) CancelIoEx(ol *windows.Overlapped) erro
 func (tdh *TestDriverHandleInfiniteLoop) GetStatsForHandle() (map[string]map[string]int64, error) {
 	return nil, nil
 }
+
 func (tdh *TestDriverHandleInfiniteLoop) Close() error {
 	return nil
 }
 
-func TestReadFileInfiniteLoop(t *testing.T) {
+func TestConnectionStatsInfiniteLoop(t *testing.T) {
 
-	activeBuf := NewConnectionBuffer(10, 10)
-	closedBuf := NewConnectionBuffer(10, 10)
+	startSize := 10
+	minSize := 10
+
+	activeBuf := NewConnectionBuffer(startSize, minSize)
+	closedBuf := NewConnectionBuffer(startSize, minSize)
 
 	di, err := NewDriverInterface(config.New(), func(flags uint32, handleType driver.HandleType) (driver.Handle, error) {
 		return &TestDriverHandleInfiniteLoop{t: t}, nil
 	})
 	require.NoError(t, err, "Failed to create new driver interface")
 
-	di.GetConnectionStats(activeBuf, closedBuf, func(c *ConnectionStats) bool {
+	_, _, err = di.GetConnectionStats(activeBuf, closedBuf, func(c *ConnectionStats) bool {
 		return true
 	})
-
+	require.NoError(t, err, "Failed to get connection stats")
 }
 
 type TestDriverHandleFiltersSuccess struct {
