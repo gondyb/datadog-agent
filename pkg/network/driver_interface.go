@@ -207,6 +207,14 @@ func (di *DriverInterface) GetConnectionStats(activeBuf *ConnectionBuffer, close
 			}
 			di.moreDataErrors.Inc()
 		}
+
+		// Windows driver hashmap implementation could return this if the
+		// provided buffer is too small to contain all entries in one of
+		// the hashmap's linkedlists
+		if bytesRead == 0 && err == windows.ERROR_MORE_DATA {
+			di.resizeDriverBuffer(cap(di.readBuffer) * 2)
+			continue
+		}
 		totalBytesRead += bytesRead
 
 		var buf []byte
