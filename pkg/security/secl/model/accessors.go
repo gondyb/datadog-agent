@@ -2,10 +2,11 @@
 package model
 
 import (
-	"github.com/DataDog/datadog-agent/pkg/security/secl/compiler/eval"
 	"net"
 	"reflect"
 	"unsafe"
+
+	"github.com/DataDog/datadog-agent/pkg/security/secl/compiler/eval"
 )
 
 // suppress unused package warning
