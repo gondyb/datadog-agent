@@ -49,11 +49,6 @@ struct bpf_map_def SEC("maps/str_array_buffers") str_array_buffers = {
     .namespace = "",
 };
 
-enum {
-    ARGS_PARSED_FROM_SYSCALL_PTR = 1,
-    ARGS_PARSED_FROM_STACK_COPY
-};
-
 struct exec_event_t {
     struct kevent_t event;
     struct process_context_t process;
@@ -245,7 +240,6 @@ int __attribute__((always_inline)) trace__sys_execveat(struct pt_regs *ctx, cons
                 .id = bpf_get_prandom_u32(),
                 .array = env,
             },
-            .args_parsed = 0
         }
     };
     cache_syscall(&syscall);
@@ -617,7 +611,7 @@ int kprobe_exit_itimers(struct pt_regs *ctx) {
 #define DEBUG 1
 #endif
 
-void __attribute__((always_inline)) parse_args_envs_seq(struct pt_regs *ctx, struct args_envs_seq_t *args_envs, int envs_id, u64 event_type) {
+void __attribute__((always_inline)) parse_args_envs_seq(struct pt_regs *ctx, struct args_envs_seq_t *args_envs, struct str_array_ref_t *args_envs_info, u64 event_type) {
     const char *args_start = args_envs->args_start;
     int offset = args_envs->offset;
     int str_count = args_envs->str_count;
@@ -625,7 +619,7 @@ void __attribute__((always_inline)) parse_args_envs_seq(struct pt_regs *ctx, str
         return;
     }
 
-    args_envs->truncated = 0;
+    args_envs_info->truncated = 0;
 
     u32 key = 0;
     struct str_array_buffer_t *buff = bpf_map_lookup_elem(&str_array_buffers, &key);
@@ -634,8 +628,7 @@ void __attribute__((always_inline)) parse_args_envs_seq(struct pt_regs *ctx, str
     }
 
     struct args_envs_event_t event = {
-        .id = args_envs->id,
-        .size = 0,
+        .id = args_envs_info->id,
     };
 
     int i = 0;
@@ -645,9 +638,8 @@ void __attribute__((always_inline)) parse_args_envs_seq(struct pt_regs *ctx, str
 
 #pragma unroll
     for (i = 0; i < MAX_ARRAY_ELEMENT_PER_TAIL; i++) {
-        // we get a pointer in the buffer, to the next position we can write a string to
         void *ptr = &(buff->value[(event.size + sizeof(n)) & (MAX_STR_BUFF_LEN - MAX_ARRAY_ELEMENT_SIZE - 1)]);
-        // we copy a string to the buffer
+
         n = bpf_probe_read_str(ptr, MAX_ARRAY_ELEMENT_SIZE, (void *)(args_start + offset));
 #ifdef DEBUG
         if (n > 0) {
@@ -659,44 +651,31 @@ void __attribute__((always_inline)) parse_args_envs_seq(struct pt_regs *ctx, str
         if (n > 0) {
             n--; // remove trailing 0
 
-            // we copy the size before the string
+            // insert size before the string
             bpf_probe_read(&(buff->value[event.size&(MAX_STR_BUFF_LEN - MAX_ARRAY_ELEMENT_SIZE - 1)]), sizeof(n), &n);
-            // len is the total length of the value
+
             int len = n + sizeof(n);
-            // if the event to too small to fit the whole encoded string
             if (event.size + len >= MAX_PERF_STR_BUFF_LEN) {
-                // copy part of the value to the event
+                // copy value to the event
                 bpf_probe_read(&event.value, MAX_PERF_STR_BUFF_LEN, perf_ptr);
 
-                // only one argument overflows the limit, send it anyway
+                // only one argument overflows the limit
                 if (event.size == 0) {
                     event.size = MAX_PERF_STR_BUFF_LEN;
-                    //index++; // move on to the next string
                     str_count++;
-                    offset += n + 1; // account trailing 0
+                    offset += n + 1; // count trailing 0
                 }
 
                 send_event(ctx, event_type, event);
                 event.size = 0;
-                if (str_count >= args_envs->argc) {
-#ifdef DEBUG
-                    bpf_printk("hit args/envs limit: changed event id\n");
-#endif
-                    event.id = envs_id;
-                }
-
             } else {
-                // in case the value fits in the remaining event space, we move on to the next string
                 event.size += len;
-                //index++;
                 str_count++;
                 offset += n + 1;
-                if (str_count == args_envs->argc || str_count == args_envs->argc + args_envs->envc) {
-#ifdef DEBUG
-                    bpf_printk("hit args/envs limit: break\n");
-#endif
-                    break;
-                }
+            }
+
+            if (str_count == args_envs->argc || str_count == args_envs->argc + args_envs->envc) {
+                break;
             }
         } else {
             str_count = 255; // stop here
@@ -705,7 +684,7 @@ void __attribute__((always_inline)) parse_args_envs_seq(struct pt_regs *ctx, str
     }
     args_envs->offset = offset;
     args_envs->str_count = str_count;
-    args_envs->truncated = i == MAX_ARRAY_ELEMENT_PER_TAIL;
+    args_envs_info->truncated = i == MAX_ARRAY_ELEMENT_PER_TAIL;
 
     // flush remaining values
     if (event.size > 0) {
@@ -728,14 +707,22 @@ int kprobe_parse_args_envs_seq(struct pt_regs *ctx) {
 #endif
 
     if (syscall->exec.args_envs.str_count < syscall->exec.args_envs.argc) {
-        syscall->exec.args_envs.id = syscall->exec.args.id;
+        //syscall->exec.args_envs.id = syscall->exec.args.id;
+#ifdef DEBUG
+        bpf_printk("calling parse_args_envs_seq on args\n");
+#endif
+        parse_args_envs_seq(ctx, &syscall->exec.args_envs, &syscall->exec.args, EVENT_ARGS_ENVS);
     } else if (syscall->exec.args_envs.str_count < syscall->exec.args_envs.argc + syscall->exec.args_envs.envc) {
-        syscall->exec.args_envs.id = syscall->exec.envs.id;
+        //syscall->exec.args_envs.id = syscall->exec.envs.id;
+#ifdef DEBUG
+        bpf_printk("calling parse_args_envs_seq on envs\n");
+#endif
+        parse_args_envs_seq(ctx, &syscall->exec.args_envs, &syscall->exec.envs, EVENT_ARGS_ENVS);
     } else {
         return 0;
     }
 
-    parse_args_envs_seq(ctx, &syscall->exec.args_envs, syscall->exec.envs.id, EVENT_ARGS_ENVS);
+    //parse_args_envs_seq(ctx, &syscall->exec.args_envs, syscall->exec.envs.id, EVENT_ARGS_ENVS);
 
     syscall->exec.next_tail++;
 
@@ -744,7 +731,8 @@ int kprobe_parse_args_envs_seq(struct pt_regs *ctx) {
     return 0;
 }
 
-int __attribute__((always_inline)) setupargpages(struct pt_regs *ctx) {
+SEC("kprobe/setup_arg_pages")
+int kprobe_setup_arg_pages(struct pt_regs *ctx) {
     struct syscall_cache_t *syscall = peek_syscall(EVENT_EXEC);
     if (!syscall) {
         return 0;
@@ -753,12 +741,10 @@ int __attribute__((always_inline)) setupargpages(struct pt_regs *ctx) {
     bpf_printk("in setupargpages\n");
 #endif
 
-    // cannot use linux_bprm->mm to get arg_start as it is not initialized by the kernel yet
-
     long ret;
 
-    // void *bprm = (void *)PT_REGS_PARM1(ctx);
-    struct linux_binprm *bprm = (struct linux_binprm *)PT_REGS_PARM1(ctx);
+    void *bprm = (void *)PT_REGS_PARM1(ctx);
+    // struct linux_binprm *bprm = (struct linux_binprm *)PT_REGS_PARM1(ctx);
 #ifdef DEBUG
     if (bprm) {
         bpf_printk("got linux_binprm addr\n");
@@ -771,7 +757,6 @@ int __attribute__((always_inline)) setupargpages(struct pt_regs *ctx) {
     int argc;
     u64 argc_offset = 72;
     ret = bpf_probe_read(&argc, sizeof(argc), (char *)bprm + argc_offset);
-    // ret = bpf_probe_read(&argc, sizeof(argc), &bprm->argc);
 #ifdef DEBUG
     if (ret) {
         bpf_printk("failed to read argc from linux_binprm\n");
@@ -807,12 +792,10 @@ int __attribute__((always_inline)) setupargpages(struct pt_regs *ctx) {
 #endif
 
     syscall->exec.args_envs.args_start = (char *)p;
-    //syscall->exec.args_envs.id = syscall->exec.args.id;
     syscall->exec.args_envs.argc = argc;
     syscall->exec.args_envs.envc = envc;
     syscall->exec.args_envs.offset = 0;
     syscall->exec.args_envs.str_count = 0;
-    syscall->exec.args_parsed = ARGS_PARSED_FROM_STACK_COPY;
     syscall->exec.next_tail = 0;
 
     fill_span_context(&syscall->exec.span_context);
@@ -820,11 +803,6 @@ int __attribute__((always_inline)) setupargpages(struct pt_regs *ctx) {
     bpf_tail_call_compat(ctx, &args_envs_seq_progs, syscall->exec.next_tail);
 
     return 0;
-}
-
-SEC("kprobe/setup_arg_pages")
-int kprobe_setup_arg_pages(struct pt_regs *ctx) {
-    return setupargpages(ctx);
 }
 
 
@@ -836,8 +814,6 @@ int __attribute__((always_inline)) parse_args_and_env(struct pt_regs *ctx) {
 
     // call it here before the memory get replaced
     fill_span_context(&syscall->exec.span_context);
-
-    syscall->exec.args_parsed = ARGS_PARSED_FROM_SYSCALL_PTR;
 
     bpf_tail_call_compat(ctx, &args_envs_progs, syscall->exec.next_tail);
     return 0;
@@ -859,17 +835,10 @@ int kprobe_security_bprm_check(struct pt_regs *ctx) {
 }
 
 void __attribute__((always_inline)) fill_args_envs(struct exec_event_t *event, struct syscall_cache_t *syscall) {
-    if (syscall->exec.args_parsed == ARGS_PARSED_FROM_STACK_COPY) {
-        event->args_id = syscall->exec.args.id;
-        event->args_truncated = syscall->exec.args_envs.truncated;
-        event->envs_id = syscall->exec.envs.id;
-        event->envs_truncated = syscall->exec.args_envs.truncated;
-    } else {
-        event->args_id = syscall->exec.args.id;
-        event->args_truncated = syscall->exec.args.truncated;
-        event->envs_id = syscall->exec.envs.id;
-        event->envs_truncated = syscall->exec.envs.truncated;
-    }
+    event->args_id = syscall->exec.args.id;
+    event->args_truncated = syscall->exec.args.truncated;
+    event->envs_id = syscall->exec.envs.id;
+    event->envs_truncated = syscall->exec.envs.truncated;
 }
 
 //SEC("kprobe/security_bprm_committed_creds")

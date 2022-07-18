@@ -142,7 +142,6 @@ struct syscall_cache_t {
             struct span_context_t span_context;
             u32 next_tail;
             u8 is_parsed;
-            u8 args_parsed;
         } exec;
 
         struct {
