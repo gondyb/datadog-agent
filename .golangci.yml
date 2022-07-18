@@ -48,6 +48,9 @@ issues:
       text: "name will be used as .* by other packages, and that stutters"
     - path: pkg/util/containerd
       text: "name will be used as .* by other packages, and that stutters"
+    # TODO: generated file has invalid imports
+    - path: "pkg/security/secl/model/accessors.go"
+      linters: [goimports]
     # TODO: Needs manual update
     - text: "package github.com/golang/protobuf/proto is deprecated: .*"
       linters: [staticcheck]
