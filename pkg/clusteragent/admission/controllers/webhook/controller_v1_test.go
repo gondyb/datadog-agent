@@ -225,7 +225,7 @@ func TestGenerateTemplatesV1(t *testing.T) {
 				mockConfig.Set("admission_controller.inject_config.enabled", true)
 				mockConfig.Set("admission_controller.mutate_unlabelled", true)
 				mockConfig.Set("admission_controller.inject_tags.enabled", false)
-				mockConfig.Set("admission_controller.auto_instru.enabled", false)
+				mockConfig.Set("admission_controller.auto_instrumentation.enabled", false)
 			},
 			configFunc: func() Config { return NewConfig(false, false) },
 			want: func() []admiv1.MutatingWebhook {
@@ -247,7 +247,7 @@ func TestGenerateTemplatesV1(t *testing.T) {
 				mockConfig.Set("admission_controller.inject_config.enabled", true)
 				mockConfig.Set("admission_controller.mutate_unlabelled", false)
 				mockConfig.Set("admission_controller.inject_tags.enabled", false)
-				mockConfig.Set("admission_controller.auto_instru.enabled", false)
+				mockConfig.Set("admission_controller.auto_instrumentation.enabled", false)
 			},
 			configFunc: func() Config { return NewConfig(false, false) },
 			want: func() []admiv1.MutatingWebhook {
@@ -265,7 +265,7 @@ func TestGenerateTemplatesV1(t *testing.T) {
 				mockConfig.Set("admission_controller.inject_config.enabled", false)
 				mockConfig.Set("admission_controller.mutate_unlabelled", true)
 				mockConfig.Set("admission_controller.inject_tags.enabled", true)
-				mockConfig.Set("admission_controller.auto_instru.enabled", false)
+				mockConfig.Set("admission_controller.auto_instrumentation.enabled", false)
 			},
 			configFunc: func() Config { return NewConfig(false, false) },
 			want: func() []admiv1.MutatingWebhook {
@@ -287,7 +287,7 @@ func TestGenerateTemplatesV1(t *testing.T) {
 				mockConfig.Set("admission_controller.inject_config.enabled", false)
 				mockConfig.Set("admission_controller.mutate_unlabelled", false)
 				mockConfig.Set("admission_controller.inject_tags.enabled", true)
-				mockConfig.Set("admission_controller.auto_instru.enabled", false)
+				mockConfig.Set("admission_controller.auto_instrumentation.enabled", false)
 			},
 			configFunc: func() Config { return NewConfig(false, false) },
 			want: func() []admiv1.MutatingWebhook {
@@ -305,7 +305,7 @@ func TestGenerateTemplatesV1(t *testing.T) {
 				mockConfig.Set("admission_controller.inject_config.enabled", false)
 				mockConfig.Set("admission_controller.mutate_unlabelled", true)
 				mockConfig.Set("admission_controller.inject_tags.enabled", false)
-				mockConfig.Set("admission_controller.auto_instru.enabled", true)
+				mockConfig.Set("admission_controller.auto_instrumentation.enabled", true)
 			},
 			configFunc: func() Config { return NewConfig(false, false) },
 			want: func() []admiv1.MutatingWebhook {
@@ -327,7 +327,7 @@ func TestGenerateTemplatesV1(t *testing.T) {
 				mockConfig.Set("admission_controller.inject_config.enabled", false)
 				mockConfig.Set("admission_controller.mutate_unlabelled", false)
 				mockConfig.Set("admission_controller.inject_tags.enabled", false)
-				mockConfig.Set("admission_controller.auto_instru.enabled", true)
+				mockConfig.Set("admission_controller.auto_instrumentation.enabled", true)
 			},
 			configFunc: func() Config { return NewConfig(false, false) },
 			want: func() []admiv1.MutatingWebhook {
@@ -344,7 +344,7 @@ func TestGenerateTemplatesV1(t *testing.T) {
 			setupConfig: func() {
 				mockConfig.Set("admission_controller.inject_config.enabled", true)
 				mockConfig.Set("admission_controller.inject_tags.enabled", true)
-				mockConfig.Set("admission_controller.auto_instru.enabled", false)
+				mockConfig.Set("admission_controller.auto_instrumentation.enabled", false)
 			},
 			configFunc: func() Config { return NewConfig(false, false) },
 			want: func() []admiv1.MutatingWebhook {
@@ -367,7 +367,7 @@ func TestGenerateTemplatesV1(t *testing.T) {
 				mockConfig.Set("admission_controller.inject_config.enabled", true)
 				mockConfig.Set("admission_controller.mutate_unlabelled", true)
 				mockConfig.Set("admission_controller.inject_tags.enabled", true)
-				mockConfig.Set("admission_controller.auto_instru.enabled", false)
+				mockConfig.Set("admission_controller.auto_instrumentation.enabled", false)
 			},
 			configFunc: func() Config { return NewConfig(false, false) },
 			want: func() []admiv1.MutatingWebhook {
@@ -398,7 +398,7 @@ func TestGenerateTemplatesV1(t *testing.T) {
 				mockConfig.Set("admission_controller.mutate_unlabelled", false)
 				mockConfig.Set("admission_controller.inject_config.enabled", true)
 				mockConfig.Set("admission_controller.inject_tags.enabled", true)
-				mockConfig.Set("admission_controller.auto_instru.enabled", false)
+				mockConfig.Set("admission_controller.auto_instrumentation.enabled", false)
 				mockConfig.Set("admission_controller.namespace_selector_fallback", true)
 			},
 			configFunc: func() Config { return NewConfig(false, true) },
@@ -423,7 +423,7 @@ func TestGenerateTemplatesV1(t *testing.T) {
 				mockConfig.Set("admission_controller.namespace_selector_fallback", false)
 				mockConfig.Set("admission_controller.inject_config.enabled", true)
 				mockConfig.Set("admission_controller.mutate_unlabelled", true)
-				mockConfig.Set("admission_controller.auto_instru.enabled", false)
+				mockConfig.Set("admission_controller.auto_instrumentation.enabled", false)
 				mockConfig.Set("admission_controller.inject_tags.enabled", false)
 			},
 			configFunc: func() Config { return NewConfig(false, false) },
