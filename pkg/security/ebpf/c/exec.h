@@ -11,6 +11,7 @@
 #define MAX_PERF_STR_BUFF_LEN 256
 #define MAX_STR_BUFF_LEN (1 << 15)
 #define MAX_ARRAY_ELEMENT_PER_TAIL 23
+#define MAX_ARRAY_ELEMENT_PER_TAIL_SEQ 18
 #define MAX_ARRAY_ELEMENT_SIZE 4096
 #define MAX_ARGS_ELEMENTS 140
 
@@ -636,7 +637,7 @@ void __attribute__((always_inline)) parse_args_envs_seq(struct pt_regs *ctx, str
     void *perf_ptr = &buff->value[0];
 
 #pragma unroll
-    for (i = 0; i < MAX_ARRAY_ELEMENT_PER_TAIL; i++) {
+    for (i = 0; i < MAX_ARRAY_ELEMENT_PER_TAIL_SEQ; i++) {
         void *ptr = &(buff->value[(event.size + sizeof(n)) & (MAX_STR_BUFF_LEN - MAX_ARRAY_ELEMENT_SIZE - 1)]);
 
         n = bpf_probe_read_str(ptr, MAX_ARRAY_ELEMENT_SIZE, (void *)(args_start + offset));
@@ -683,7 +684,7 @@ void __attribute__((always_inline)) parse_args_envs_seq(struct pt_regs *ctx, str
     }
     args_envs->offset = offset;
     args_envs->str_count = str_count;
-    args_envs_info->truncated = i == MAX_ARRAY_ELEMENT_PER_TAIL;
+    args_envs_info->truncated = i == MAX_ARRAY_ELEMENT_PER_TAIL_SEQ;
 
     // flush remaining values
     if (event.size > 0) {
