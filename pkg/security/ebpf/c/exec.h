@@ -754,7 +754,8 @@ int kprobe_setup_arg_pages(struct pt_regs *ctx) {
 #endif
 
     int argc;
-    u64 argc_offset = 72;
+    u64 argc_offset;
+    LOAD_CONSTANT("linux_binprm_argc_offset", argc_offset);
     ret = bpf_probe_read(&argc, sizeof(argc), (char *)bprm + argc_offset);
 #ifdef DEBUG
     if (ret) {
@@ -766,7 +767,8 @@ int kprobe_setup_arg_pages(struct pt_regs *ctx) {
 #endif
 
     int envc;
-    u64 envc_offset = 76;
+    u64 envc_offset;
+    LOAD_CONSTANT("linux_binprm_envc_offset", envc_offset);
     ret = bpf_probe_read(&envc, sizeof(envc), (char *)bprm + envc_offset);
     // ret = bpf_probe_read(&envc, sizeof(envc), &bprm->envc);
 #ifdef DEBUG
@@ -779,7 +781,8 @@ int kprobe_setup_arg_pages(struct pt_regs *ctx) {
 #endif
 
     unsigned long p;
-    u64 p_offset = 24;
+    u64 p_offset;
+    LOAD_CONSTANT("linux_binprm_p_offset", p_offset);
     ret = bpf_probe_read(&p, sizeof(p), (char *)bprm + p_offset);
 #ifdef DEBUG
     if (ret) {

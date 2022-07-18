@@ -21,11 +21,9 @@ struct str_array_ref_t {
 
 struct args_envs_seq_t {
     const char *args_start;
-    u32 id;
     u32 offset;
     int argc, envc;
     u8 str_count;
-    u8 truncated;
 };
 
 struct dentry_resolver_input_t {
