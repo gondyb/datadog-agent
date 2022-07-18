@@ -2,7 +2,6 @@
 #define _EXEC_H_
 
 #include <linux/tty.h>
-#include <linux/binfmts.h>
 
 #include "filters.h"
 #include "syscalls.h"
