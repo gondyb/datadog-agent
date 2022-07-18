@@ -337,6 +337,7 @@ func TestService(t *testing.T) {
 	targets := []byte(`testtargets`)
 	testTargetsCustom := []byte(`{"opaque_backend_state":"dGVzdF9zdGF0ZQ=="}`)
 	client := &pbgo.Client{
+		Id: "testid",
 		State: &pbgo.ClientState{
 			RootVersion: 2,
 		},
@@ -425,7 +426,8 @@ func TestService(t *testing.T) {
 // Test for client predicates
 func TestServiceClientPredicates(t *testing.T) {
 	clientID := "client-id"
-	clientIDFail := clientID + "_fail"
+	runtimeID := "runtime-id"
+	runtimeIDFail := runtimeID + "_fail"
 
 	assert := assert.New(t)
 	clock := clock.NewMock()
@@ -438,6 +440,7 @@ func TestServiceClientPredicates(t *testing.T) {
 	service := newTestService(t, api, uptaneClient, clock)
 
 	client := &pbgo.Client{
+		Id: clientID,
 		State: &pbgo.ClientState{
 			RootVersion: 2,
 		},
@@ -446,7 +449,10 @@ func TestServiceClientPredicates(t *testing.T) {
 		},
 		IsTracer: true,
 		ClientTracer: &pbgo.ClientTracer{
-			RuntimeId: clientID,
+			RuntimeId:  runtimeID,
+			Language:   "php",
+			Env:        "staging",
+			AppVersion: "1",
 		},
 	}
 	uptaneClient.On("TargetsMeta").Return([]byte(`testtargets`), nil)
@@ -458,13 +464,13 @@ func TestServiceClientPredicates(t *testing.T) {
 		"datadog/2/APM_SAMPLING/id/1": {FileMeta: data.FileMeta{Custom: customMeta([]*pbgo.TracerPredicateV1{})}},
 		"datadog/2/APM_SAMPLING/id/2": {FileMeta: data.FileMeta{Custom: customMeta([]*pbgo.TracerPredicateV1{
 			{
-				RuntimeID: clientID,
+				RuntimeID: runtimeID,
 			},
 		})}},
 		// must not be delivered
 		"datadog/2/TESTING1/id/1": {FileMeta: data.FileMeta{Custom: customMeta([]*pbgo.TracerPredicateV1{
 			{
-				RuntimeID: clientIDFail,
+				RuntimeID: runtimeIDFail,
 			},
 		})}},
 		"datadog/2/APPSEC/id/1": {FileMeta: data.FileMeta{Custom: customMeta([]*pbgo.TracerPredicateV1{
