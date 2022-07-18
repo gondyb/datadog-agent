@@ -840,7 +840,6 @@ void __attribute__((always_inline)) fill_args_envs(struct exec_event_t *event, s
     event->envs_truncated = syscall->exec.envs.truncated;
 }
 
-//SEC("kprobe/security_bprm_committed_creds")
 SEC("kretprobe/setup_arg_pages")
 int kretprobe_setup_arg_pages(struct pt_regs *ctx) {
     struct syscall_cache_t *syscall = pop_syscall(EVENT_EXEC);
