@@ -701,27 +701,27 @@ int kprobe_parse_args_envs_seq(struct pt_regs *ctx) {
         return 0;
     }
 
+    struct str_array_ref_t *args_envs_info;
+
 #ifdef DEBUG
     bpf_printk("in kprobe_parse_args_envs_seq\n");
 #endif
 
     if (syscall->exec.args_envs.str_count < syscall->exec.args_envs.argc) {
-        //syscall->exec.args_envs.id = syscall->exec.args.id;
 #ifdef DEBUG
         bpf_printk("calling parse_args_envs_seq on args\n");
 #endif
-        parse_args_envs_seq(ctx, &syscall->exec.args_envs, &syscall->exec.args, EVENT_ARGS_ENVS);
+        args_envs_info = &syscall->exec.args;
     } else if (syscall->exec.args_envs.str_count < syscall->exec.args_envs.argc + syscall->exec.args_envs.envc) {
-        //syscall->exec.args_envs.id = syscall->exec.envs.id;
 #ifdef DEBUG
         bpf_printk("calling parse_args_envs_seq on envs\n");
 #endif
-        parse_args_envs_seq(ctx, &syscall->exec.args_envs, &syscall->exec.envs, EVENT_ARGS_ENVS);
+        args_envs_info = &syscall->exec.envs;
     } else {
         return 0;
     }
 
-    //parse_args_envs_seq(ctx, &syscall->exec.args_envs, syscall->exec.envs.id, EVENT_ARGS_ENVS);
+    parse_args_envs_seq(ctx, &syscall->exec.args_envs, args_envs_info, EVENT_ARGS_ENVS);
 
     syscall->exec.next_tail++;
 
