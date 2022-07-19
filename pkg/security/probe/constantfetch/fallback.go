@@ -699,7 +699,7 @@ func getLinuxBinPrmPOffset(kv *kernel.Version) uint64 {
 }
 
 func getLinuxBinPrmArgcOffset(kv *kernel.Version) uint64 {
-	offset := uint64(72)
+	offset := uint64(192)
 
 	switch {
 	case kv.IsInRangeCloseOpen(kernel.Kernel4_19, kernel.Kernel5_0):
@@ -720,7 +720,7 @@ func getLinuxBinPrmArgcOffset(kv *kernel.Version) uint64 {
 }
 
 func getLinuxBinPrmEnvcOffset(kv *kernel.Version) uint64 {
-	offset := uint64(76)
+	offset := uint64(196)
 
 	switch {
 	case kv.IsInRangeCloseOpen(kernel.Kernel4_19, kernel.Kernel5_0):
