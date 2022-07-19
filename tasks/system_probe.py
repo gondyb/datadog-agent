@@ -25,8 +25,8 @@ NPM_TAG = "npm"
 GIMME_ENV_VARS = ['GOROOT', 'PATH']
 DNF_TAG = "dnf"
 
-CLANG_CMD = "clang-14 {flags} -c '{c_file}' -o '{bc_file}' -S -emit-llvm"
-LLC_CMD = "llc-14 -march=bpf -filetype=obj -o '{obj_file}' '{bc_file}'"
+CLANG_CMD = "clang {flags} -c '{c_file}' -o '{bc_file}'"
+LLC_CMD = "llc -march=bpf -filetype=obj -o '{obj_file}' '{bc_file}'"
 
 KITCHEN_DIR = os.getenv('DD_AGENT_TESTING_DIR') or os.path.normpath(os.path.join(os.getcwd(), "test", "kitchen"))
 KITCHEN_ARTIFACT_DIR = os.path.join(KITCHEN_DIR, "site-cookbooks", "dd-system-probe-check", "files", "default", "tests")
