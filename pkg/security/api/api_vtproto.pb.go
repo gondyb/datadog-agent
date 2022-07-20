@@ -395,10 +395,13 @@ func (this *ActivityDumpMetadataMessage) EqualVT(that *ActivityDumpMetadataMessa
 	if this.LinuxDistribution != that.LinuxDistribution {
 		return false
 	}
+	if this.Arch != that.Arch {
+		return false
+	}
 	if this.Name != that.Name {
 		return false
 	}
-	if this.ActivityDumpVersion != that.ActivityDumpVersion {
+	if this.ProtobufVersion != that.ProtobufVersion {
 		return false
 	}
 	if this.DifferentiateArgs != that.DifferentiateArgs {
@@ -417,6 +420,9 @@ func (this *ActivityDumpMetadataMessage) EqualVT(that *ActivityDumpMetadataMessa
 		return false
 	}
 	if this.Size != that.Size {
+		return false
+	}
+	if this.Serialization != that.Serialization {
 		return false
 	}
 	return string(this.unknownFields) == string(that.unknownFields)
@@ -2291,38 +2297,45 @@ func (m *ActivityDumpMetadataMessage) MarshalToSizedBufferVT(dAtA []byte) (int, 
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if len(m.Serialization) > 0 {
+		i -= len(m.Serialization)
+		copy(dAtA[i:], m.Serialization)
+		i = encodeVarint(dAtA, i, uint64(len(m.Serialization)))
+		i--
+		dAtA[i] = 0x72
+	}
 	if m.Size != 0 {
 		i = encodeVarint(dAtA, i, uint64(m.Size))
 		i--
-		dAtA[i] = 0x60
+		dAtA[i] = 0x68
 	}
 	if len(m.Timeout) > 0 {
 		i -= len(m.Timeout)
 		copy(dAtA[i:], m.Timeout)
 		i = encodeVarint(dAtA, i, uint64(len(m.Timeout)))
 		i--
-		dAtA[i] = 0x5a
+		dAtA[i] = 0x62
 	}
 	if len(m.Start) > 0 {
 		i -= len(m.Start)
 		copy(dAtA[i:], m.Start)
 		i = encodeVarint(dAtA, i, uint64(len(m.Start)))
 		i--
-		dAtA[i] = 0x52
+		dAtA[i] = 0x5a
 	}
 	if len(m.ContainerID) > 0 {
 		i -= len(m.ContainerID)
 		copy(dAtA[i:], m.ContainerID)
 		i = encodeVarint(dAtA, i, uint64(len(m.ContainerID)))
 		i--
-		dAtA[i] = 0x4a
+		dAtA[i] = 0x52
 	}
 	if len(m.Comm) > 0 {
 		i -= len(m.Comm)
 		copy(dAtA[i:], m.Comm)
 		i = encodeVarint(dAtA, i, uint64(len(m.Comm)))
 		i--
-		dAtA[i] = 0x42
+		dAtA[i] = 0x4a
 	}
 	if m.DifferentiateArgs {
 		i--
@@ -2332,19 +2345,26 @@ func (m *ActivityDumpMetadataMessage) MarshalToSizedBufferVT(dAtA []byte) (int, 
 			dAtA[i] = 0
 		}
 		i--
-		dAtA[i] = 0x38
+		dAtA[i] = 0x40
 	}
-	if len(m.ActivityDumpVersion) > 0 {
-		i -= len(m.ActivityDumpVersion)
-		copy(dAtA[i:], m.ActivityDumpVersion)
-		i = encodeVarint(dAtA, i, uint64(len(m.ActivityDumpVersion)))
+	if len(m.ProtobufVersion) > 0 {
+		i -= len(m.ProtobufVersion)
+		copy(dAtA[i:], m.ProtobufVersion)
+		i = encodeVarint(dAtA, i, uint64(len(m.ProtobufVersion)))
 		i--
-		dAtA[i] = 0x32
+		dAtA[i] = 0x3a
 	}
 	if len(m.Name) > 0 {
 		i -= len(m.Name)
 		copy(dAtA[i:], m.Name)
 		i = encodeVarint(dAtA, i, uint64(len(m.Name)))
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.Arch) > 0 {
+		i -= len(m.Arch)
+		copy(dAtA[i:], m.Arch)
+		i = encodeVarint(dAtA, i, uint64(len(m.Arch)))
 		i--
 		dAtA[i] = 0x2a
 	}
@@ -3352,11 +3372,15 @@ func (m *ActivityDumpMetadataMessage) SizeVT() (n int) {
 	if l > 0 {
 		n += 1 + l + sov(uint64(l))
 	}
+	l = len(m.Arch)
+	if l > 0 {
+		n += 1 + l + sov(uint64(l))
+	}
 	l = len(m.Name)
 	if l > 0 {
 		n += 1 + l + sov(uint64(l))
 	}
-	l = len(m.ActivityDumpVersion)
+	l = len(m.ProtobufVersion)
 	if l > 0 {
 		n += 1 + l + sov(uint64(l))
 	}
@@ -3381,6 +3405,10 @@ func (m *ActivityDumpMetadataMessage) SizeVT() (n int) {
 	}
 	if m.Size != 0 {
 		n += 1 + sov(uint64(m.Size))
+	}
+	l = len(m.Serialization)
+	if l > 0 {
+		n += 1 + l + sov(uint64(l))
 	}
 	if m.unknownFields != nil {
 		n += len(m.unknownFields)
@@ -6013,6 +6041,38 @@ func (m *ActivityDumpMetadataMessage) UnmarshalVT(dAtA []byte) error {
 			iNdEx = postIndex
 		case 5:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Arch", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Arch = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
 			}
 			var stringLen uint64
@@ -6043,9 +6103,9 @@ func (m *ActivityDumpMetadataMessage) UnmarshalVT(dAtA []byte) error {
 			}
 			m.Name = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 6:
+		case 7:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ActivityDumpVersion", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ProtobufVersion", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -6073,9 +6133,9 @@ func (m *ActivityDumpMetadataMessage) UnmarshalVT(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.ActivityDumpVersion = string(dAtA[iNdEx:postIndex])
+			m.ProtobufVersion = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 7:
+		case 8:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field DifferentiateArgs", wireType)
 			}
@@ -6095,7 +6155,7 @@ func (m *ActivityDumpMetadataMessage) UnmarshalVT(dAtA []byte) error {
 				}
 			}
 			m.DifferentiateArgs = bool(v != 0)
-		case 8:
+		case 9:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Comm", wireType)
 			}
@@ -6127,7 +6187,7 @@ func (m *ActivityDumpMetadataMessage) UnmarshalVT(dAtA []byte) error {
 			}
 			m.Comm = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 9:
+		case 10:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ContainerID", wireType)
 			}
@@ -6159,7 +6219,7 @@ func (m *ActivityDumpMetadataMessage) UnmarshalVT(dAtA []byte) error {
 			}
 			m.ContainerID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 10:
+		case 11:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Start", wireType)
 			}
@@ -6191,7 +6251,7 @@ func (m *ActivityDumpMetadataMessage) UnmarshalVT(dAtA []byte) error {
 			}
 			m.Start = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 11:
+		case 12:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Timeout", wireType)
 			}
@@ -6223,7 +6283,7 @@ func (m *ActivityDumpMetadataMessage) UnmarshalVT(dAtA []byte) error {
 			}
 			m.Timeout = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 12:
+		case 13:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Size", wireType)
 			}
@@ -6242,6 +6302,38 @@ func (m *ActivityDumpMetadataMessage) UnmarshalVT(dAtA []byte) error {
 					break
 				}
 			}
+		case 14:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Serialization", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Serialization = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skip(dAtA[iNdEx:])
