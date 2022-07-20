@@ -64,13 +64,13 @@ var CapPool = sync.Pool{
 
 // TrafficCaptureWriter allows writing dogstatsd traffic to a file.
 type TrafficCaptureWriter struct {
-	File     afero.File
-	zWriter  *zstd.Writer
-	writer   *bufio.Writer
-	Traffic  chan *CaptureBuffer
-	Location string
-	shutdown chan struct{}
-	ongoing  bool
+	File               afero.File
+	zWriter            *zstd.Writer
+	writer             *bufio.Writer
+	Traffic            chan *CaptureBuffer
+	Location           string
+	shutdown           chan struct{}
+	ongoing, accepting bool
 
 	sharedPacketPoolManager *packets.PoolManager
 	oobPacketPoolManager    *packets.PoolManager
@@ -225,6 +225,7 @@ func (tc *TrafficCaptureWriter) Capture(l string, d time.Duration, compressed bo
 	tc.shutdown = shutdown
 
 	tc.ongoing = true
+	//tc.accepting.Store(true)
 
 	err = tc.WriteHeader()
 	if err != nil {
@@ -261,6 +262,10 @@ process:
 			}
 		case <-shutdown:
 			log.Debug("Capture shutting down")
+			// stop accepting new messages
+			tc.Lock()
+			tc.accepting = false
+			tc.Unlock()
 			break process
 		}
 	}
@@ -333,8 +338,10 @@ func (tc *TrafficCaptureWriter) StopCapture() {
 // Enqueue enqueues a capture buffer so it's written to file.
 func (tc *TrafficCaptureWriter) Enqueue(msg *CaptureBuffer) bool {
 	qd := false
+	tc.RLock()
+	defer tc.RUnlock()
 
-	if tc.IsOngoing() {
+	if tc.accepting {
 		tc.Traffic <- msg
 		qd = true
 	}
