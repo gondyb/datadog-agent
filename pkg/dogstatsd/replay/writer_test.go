@@ -12,12 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/DataDog/datadog-agent/pkg/config"
-	"github.com/DataDog/datadog-agent/pkg/dogstatsd/packets"
-	pb "github.com/DataDog/datadog-agent/pkg/proto/pbgo"
 	"github.com/DataDog/zstd"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/DataDog/datadog-agent/pkg/config"
+	"github.com/DataDog/datadog-agent/pkg/dogstatsd/packets"
+	pb "github.com/DataDog/datadog-agent/pkg/proto/pbgo"
 )
 
 func writerTest(t *testing.T, z bool) {
@@ -171,10 +172,9 @@ func TestValidateLocation(t *testing.T) {
 		captureFs.fs = originalFs
 	}()
 
-	writer := NewTrafficCaptureWriter(1)
-	_, err := writer.ValidateLocation(locationBad)
+	_, err := ValidateLocation(locationBad)
 	assert.NotNil(t, err)
-	l, err := writer.ValidateLocation(locationGood)
+	l, err := ValidateLocation(locationGood)
 	assert.Nil(t, err)
 	assert.Equal(t, locationGood, l)
 

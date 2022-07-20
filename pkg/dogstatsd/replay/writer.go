@@ -16,6 +16,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/DataDog/zstd"
+	"github.com/golang/protobuf/proto"
+	"github.com/spf13/afero"
+
 	// Refactor relevant bits
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/dogstatsd/packets"
@@ -23,10 +27,6 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/proto/utils"
 	"github.com/DataDog/datadog-agent/pkg/tagger"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
-	"github.com/DataDog/zstd"
-	"github.com/spf13/afero"
-
-	"github.com/golang/protobuf/proto"
 )
 
 const (
@@ -131,7 +131,7 @@ func (tc *TrafficCaptureWriter) ProcessMessage(msg *CaptureBuffer) error {
 
 // ValidateLocation validates the location passed as an argument is writable.
 // The location and/or and error if any are returned.
-func (tc *TrafficCaptureWriter) ValidateLocation(l string) (string, error) {
+func ValidateLocation(l string) (string, error) {
 	captureFs.RLock()
 	defer captureFs.RUnlock()
 
@@ -139,7 +139,7 @@ func (tc *TrafficCaptureWriter) ValidateLocation(l string) (string, error) {
 		return "", fmt.Errorf("no filesystem backend available, impossible to start capture")
 	}
 
-	defaultLocation := (l == "")
+	defaultLocation := l == ""
 
 	var location string
 	if defaultLocation {
@@ -192,7 +192,7 @@ func (tc *TrafficCaptureWriter) Capture(l string, d time.Duration, compressed bo
 		return
 	}
 
-	location, err = tc.ValidateLocation(l)
+	location, err = ValidateLocation(l)
 	if err != nil {
 		return
 	}
