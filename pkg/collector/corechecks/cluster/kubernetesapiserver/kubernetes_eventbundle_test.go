@@ -9,13 +9,14 @@ package kubernetesapiserver
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/metrics"
 
-	cache "github.com/patrickmn/go-cache"
+	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -188,5 +189,25 @@ func TestEventsTagging(t *testing.T) {
 			assert.NoError(t, err)
 			assert.ElementsMatch(t, tt.expectedTags, got.Tags)
 		})
+	}
+}
+
+func TestUnifiedServiceTagging(t *testing.T) {
+	os.Setenv("DD_VERSION", "myTestVersion")
+	defer os.Unsetenv("DD_VERSION")
+	os.Setenv("DD_ENV", "myTestEnv")
+	defer os.Unsetenv("DD_ENV")
+	os.Setenv("DD_SERVICE", "myTestService")
+	defer os.Unsetenv("DD_SERVICE")
+
+	event := createEvent(1, "default", "nginx-2d9jp-cmssw", "Pod", "c9f47d37-68d1-46a4-9295-419b054cb351", "kubelet", "xx-xx-default-pool-xxx-xxx", "Killing", "Stopping container daemon", "Normal", 709662600)
+	expectedTags := []string{"env:myTestEnv", "version:myTestVersion", "service:myTestService"}
+
+	bundle := newKubernetesEventBundler(event)
+	bundle.addEvent(event)
+	got, err := bundle.formatEvents("", cache.New(defaultCacheExpire, defaultCachePurge))
+	assert.NoError(t, err)
+	for _, tag := range expectedTags {
+		assert.Contains(t, got.Tags, tag)
 	}
 }

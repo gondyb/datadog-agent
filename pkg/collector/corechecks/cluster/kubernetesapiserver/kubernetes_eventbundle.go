@@ -11,10 +11,11 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"strings"
 	"time"
 
-	cache "github.com/patrickmn/go-cache"
+	"github.com/patrickmn/go-cache"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -22,6 +23,17 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes"
 	as "github.com/DataDog/datadog-agent/pkg/util/kubernetes/apiserver"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
+)
+
+const (
+	// Unified Service Tagging constants
+	envEnvVar     = "DD_ENV"
+	versionEnvVar = "DD_VERSION"
+	serviceEnvVar = "DD_SERVICE"
+
+	envTagVar     = "env"
+	versionTagVar = "version"
+	serviceTagVar = "service"
 )
 
 type kubernetesEventBundle struct {
@@ -121,6 +133,12 @@ func (b *kubernetesEventBundle) formatEvents(clusterName string, providerIDCache
 			fmt.Sprintf("kube_namespace:%s", b.namespace),
 		)
 	}
+
+	tags = append(tags,
+		fmt.Sprintf("%s:%s", envTagVar, os.Getenv(envEnvVar)),
+		fmt.Sprintf("%s:%s", versionTagVar, os.Getenv(versionEnvVar)),
+		fmt.Sprintf("%s:%s", serviceTagVar, os.Getenv(serviceEnvVar)),
+	)
 
 	// If hostname was not defined, the aggregator will then set the local hostname
 	output := metrics.Event{
